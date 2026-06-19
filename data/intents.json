@@ -1,0 +1,102 @@
+{
+  "saludo": {
+    "examples": {
+      "es": ["hola", "buenas", "que tal", "buenos dias", "buenas tardes", "buenas noches", "hey", "como va", "saludos"],
+      "en": ["hello", "hi", "good morning", "good afternoon", "good evening", "hey", "what's up", "greetings", "howdy"]
+    },
+    "responses": {
+      "es": ["Hola, ¿en que puedo ayudarte?", "Buenas, dime que necesitas."],
+      "en": ["Hello, how can I help you?", "Hi there, what do you need?"]
+    }
+  },
+  "despedida": {
+    "examples": {
+      "es": ["adios", "hasta luego", "nos vemos", "chao", "salir", "hasta pronto", "me voy"],
+      "en": ["bye", "goodbye", "see you", "see you later", "exit", "farewell", "i'm leaving"]
+    },
+    "responses": {
+      "es": ["Hasta luego.", "Nos vemos pronto."],
+      "en": ["Goodbye.", "See you soon."]
+    }
+  },
+  "estado_sistema": {
+    "examples": {
+      "es": ["como estas", "como van los recursos", "estado del sistema", "que recursos tienes", "rendimiento", "como te sientes", "estas bien"],
+      "en": ["how are you", "system status", "how are resources", "how is performance", "are you ok", "how do you feel"]
+    },
+    "responses": {
+      "es": ["Estoy funcionando dentro de los limites de hardware detectados."],
+      "en": ["I'm running within the detected hardware limits."]
+    }
+  },
+  "sugerencias": {
+    "examples": {
+      "es": ["que mejoras sugieres", "sugerencias", "puntos de mejora", "que necesitas para mejorar", "en que puedo mejorarte", "que te falta"],
+      "en": ["what improvements do you suggest", "suggestions", "what do you need to improve", "how can i improve you", "what are you missing"]
+    },
+    "responses": {
+      "es": ["Estas son mis sugerencias actuales de mejora y hardware:"],
+      "en": ["Here are my current improvement and hardware suggestions:"]
+    }
+  },
+  "hardware": {
+    "examples": {
+      "es": ["que hardware necesitas", "que recursos te ayudarian", "necesitas mas memoria", "que componentes mejorarian tu rendimiento", "que pc necesitas"],
+      "en": ["what hardware do you need", "what resources would help you", "do you need more memory", "what would improve your performance", "what pc do you need"]
+    },
+    "responses": {
+      "es": ["Estas son mis necesidades de hardware para una mejora continua:"],
+      "en": ["These are my hardware needs for continuous improvement:"]
+    }
+  },
+  "agradecimiento": {
+    "examples": {
+      "es": ["gracias", "muchas gracias", "te agradezco", "mil gracias"],
+      "en": ["thanks", "thank you", "much appreciated", "thanks a lot"]
+    },
+    "responses": {
+      "es": ["De nada, para eso estoy.", "Con gusto."],
+      "en": ["You're welcome.", "Happy to help."]
+    }
+  },
+  "ayuda": {
+    "examples": {
+      "es": ["ayuda", "que puedes hacer", "comandos", "que sabes hacer", "para que sirves", "opciones"],
+      "en": ["help", "what can you do", "commands", "what are your features", "what are you for", "options"]
+    },
+    "responses": {
+      "es": ["Puedo responder en español o ingles, decirte el estado del sistema, mis sugerencias de mejora y necesidades de hardware, y aprendo de tu uso. Comandos: estado, sugerencias, hardware, salir."],
+      "en": ["I can answer in Spanish or English, report system status, share improvement and hardware suggestions, and I learn from your usage. Commands: status, suggestions, hardware, exit."]
+    }
+  },
+  "identidad": {
+    "examples": {
+      "es": ["quien eres", "como te llamas", "que eres", "eres una ia", "cuentame de ti"],
+      "en": ["who are you", "what is your name", "what are you", "are you an ai", "tell me about yourself"]
+    },
+    "responses": {
+      "es": ["Soy una IA local bilingue que se adapta a los recursos de tu equipo y busca mejorarse para servirte mejor."],
+      "en": ["I'm a local bilingual AI that adapts to your machine's resources and seeks to improve itself to serve you better."]
+    }
+  },
+  "afirmacion": {
+    "examples": {
+      "es": ["si", "claro", "correcto", "exacto", "de acuerdo", "vale"],
+      "en": ["yes", "sure", "correct", "exactly", "agreed", "okay"]
+    },
+    "responses": {
+      "es": ["Entendido."],
+      "en": ["Understood."]
+    }
+  },
+  "negacion": {
+    "examples": {
+      "es": ["no", "para nada", "negativo", "incorrecto"],
+      "en": ["no", "not at all", "negative", "incorrect"]
+    },
+    "responses": {
+      "es": ["De acuerdo."],
+      "en": ["Alright."]
+    }
+  }
+}

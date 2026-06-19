@@ -1,0 +1,20 @@
+# Formatos base (recomendados)
+pdfplumber>=0.9.0
+python-docx>=0.8.11
+beautifulsoup4>=4.12.0
+
+# Excel .xlsx (sin esto usa fallback ZIP+XML — funciona pero sin fórmulas)
+openpyxl>=3.1.0
+
+# PowerPoint .pptx (sin esto usa fallback ZIP+XML — funciona para texto simple)
+python-pptx>=0.6.21
+
+# Excel .xls antiguo (solo si tienes archivos .xls pre-2007)
+# xlrd>=2.0.1
+
+# ── LLM backends (elige UNO según config_llm.json) ──────────────────────
+# openai>=1.0.0        ← si backend="openai"
+# anthropic>=0.20.0    ← si backend="anthropic"
+#
+# Ollama no requiere pip. Descárgalo en https://ollama.com
+# Luego ejecuta:  ollama pull llama3.2   (o phi3, mistral, gemma2:2b ...)

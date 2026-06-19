@@ -1,0 +1,65 @@
+__pycache__/
+*.pyc
+config.json
+config_llm.json
+logs/*.log
+generated_code/
+.claude/
+
+# Datos de usuario local (PRIVADOS — nunca van a GitHub)
+data/users.json
+data/learned_vocab.json
+data/knowledge_index.json
+data/knowledge_review.json
+data/import_registry.json
+data/conversations/
+
+# Carpetas de ingestión de documentos — solo local, nunca en GitHub
+imports/
+documents/
+
+# PDFs — siempre locales, son datos del usuario
+*.pdf
+
+# Conocimiento médico/personal derivado de PDFs — solo en el dispositivo del usuario
+knowledge/farma_1/
+knowledge/farmacologia/
+knowledge/cardiologia/
+knowledge/fisiologia/
+knowledge/fisiologi*/
+knowledge/immunologia/
+knowledge/neurologia/
+knowledge/sistema_respiratorio_*/
+knowledge/libro_microbiologia_medica_mur/
+knowledge/guadalajara_cardiologia_6a_edi/
+
+# Archivos médicos sueltos dentro de microbiologia (derivados de PDFs)
+knowledge/microbiologia/00-*
+knowledge/microbiologia/01-respuestas*
+knowledge/microbiologia/03-*
+knowledge/microbiologia/13-*
+
+# Carpetas de usuario individuales (privadas por dispositivo)
+knowledge/users/
+knowledge/personal_*/
+knowledge/user_docs/
+
+# ── Lo que SÍ va en GitHub (conocimiento base público) ──────────
+!knowledge/biologia/
+!knowledge/quimica/
+!knowledge/fisica/
+!knowledge/matematicas/
+!knowledge/geografia/
+!knowledge/geologia/
+!knowledge/botanica/
+!knowledge/biologia_molecular/
+!knowledge/genetica/
+!knowledge/psicologia/
+!knowledge/filosofia/
+!knowledge/epistemologia/
+!knowledge/ontologia/
+!knowledge/historia/
+!knowledge/economia/
+!knowledge/sociologia/
+!knowledge/programacion/
+!knowledge/green_tail/

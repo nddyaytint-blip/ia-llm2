@@ -1,0 +1,22 @@
+@echo off
+chcp 65001 >nul
+cd /d "%~dp0"
+echo.
+echo   ██████╗ ██████╗ ███████╗███████╗███╗   ██╗    ████████╗ █████╗ ██╗██╗
+echo   ██╔════╝ ██╔══██╗██╔════╝██╔════╝████╗  ██║    ╚══██╔══╝██╔══██╗██║██║
+echo   ██║  ███╗██████╔╝█████╗  █████╗  ██╔██╗ ██║       ██║   ███████║██║██║
+echo   ██║   ██║██╔══██╗██╔══╝  ██╔══╝  ██║╚██╗██║       ██║   ██╔══██║██║██║
+echo   ╚██████╔╝██║  ██║███████╗███████╗██║ ╚████║       ██║   ██║  ██║██║███████╗
+echo    ╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝       ╚═╝   ╚═╝  ╚═╝╚═╝╚══════╝
+echo.
+echo   Iniciando servicio... http://127.0.0.1:8765/
+echo.
+
+:: Abrir el navegador tras 3 segundos (mientras el servidor arranca)
+start "" /B cmd /c "timeout /t 3 /nobreak >nul & start """" ""http://127.0.0.1:8765/"""
+
+py server.py --host 127.0.0.1 --port 8765
+
+echo.
+echo   --- El servicio se detuvo. Pulsa una tecla para cerrar. ---
+pause >nul
