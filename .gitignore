@@ -3,6 +3,8 @@ __pycache__/
 config.json
 config_llm.json
 logs/*.log
+build/
+dist/
 generated_code/
 .claude/
 

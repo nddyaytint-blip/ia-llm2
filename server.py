@@ -12,7 +12,10 @@ from core.engine import Engine
 from core import code_tools
 
 APP_NAME = "Green Tail"
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(BASE_DIR, "web")
 
 engine = Engine()

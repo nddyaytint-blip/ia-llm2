@@ -1,0 +1,37 @@
+==================================================
+  Green Tail — Asistente de Conocimiento (LLM)
+  Instrucciones de instalación para testers
+==================================================
+
+1. REQUISITOS
+   - Windows 10 / 11 (64-bit)
+   - Sin Python requerido
+   - Para el modo LLM (opcional): Ollama
+
+2. CÓMO USAR
+   - Descomprime la carpeta donde quieras
+   - Ejecuta: green-tail-llm.exe
+   - El navegador se abre en http://localhost:8000
+   - La ventana negra muestra si el LLM está activo o no
+
+3. ACTIVAR EL LLM (OPCIONAL)
+   a) Descarga Ollama desde: https://ollama.com/download
+   b) Instálalo y luego abre una terminal y ejecuta:
+         ollama pull qwen2.5:1.5b
+      (descarga ~1 GB, solo la primera vez)
+   c) Reinicia green-tail-llm.exe — verás "[OK] Ollama detectado"
+   SIN OLLAMA: el programa funciona igual en modo BM25 (más rápido, sin LLM)
+
+4. AGREGAR CONOCIMIENTO
+   - Pon documentos en la carpeta "imports/"
+   - Formatos: PDF, Word, Excel, PowerPoint, ODT, CSV, TXT, HTML
+   - Se indexan automáticamente
+
+5. SI EL ANTIVIRUS BLOQUEA EL EXE
+   - Agrega excepción en el antivirus para esta carpeta
+
+6. REPORTAR ERRORES
+   - Adjunta el contenido de "logs/"
+   - Indica si Ollama estaba activo o no, y qué preguntaste
+
+==================================================
