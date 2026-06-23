@@ -4,9 +4,13 @@
 
 block_cipher = None
 
+# Recursos de SOLO LECTURA (el launcher los siembra junto al exe). Solo los
+# 3 recursos del motor — NO datos de usuario (privacidad e índice obsoleto).
 added_datas = [
-    ("web",  "web"),
-    ("data", "data"),
+    ("web",                    "web"),
+    ("data/intents.json",      "data"),
+    ("data/stopwords_es.txt",  "data"),
+    ("data/stopwords_en.txt",  "data"),
 ]
 
 hidden = [

@@ -26,6 +26,35 @@ for folder in ("knowledge", "data", "imports", "documents", "logs"):
     os.makedirs(os.path.join(BASE_DIR, folder), exist_ok=True)
 
 
+def _seed_bundled_resources():
+    """Copia los recursos de solo lectura (data/, web/) del bundle de
+    PyInstaller (_internal/) junto al exe, si faltan. Sin esto el motor no
+    encuentra intents.json, stopwords ni index.html (BASE_DIR = dir del exe,
+    pero PyInstaller empaqueta en _internal/)."""
+    if not getattr(sys, "frozen", False):
+        return
+    bundle = getattr(sys, "_MEIPASS", None)
+    if not bundle:
+        return
+    import shutil
+    for resource in ("data", "web"):
+        src = os.path.join(bundle, resource)
+        if not os.path.isdir(src):
+            continue
+        dst = os.path.join(BASE_DIR, resource)
+        os.makedirs(dst, exist_ok=True)
+        for name in os.listdir(src):
+            s, d = os.path.join(src, name), os.path.join(dst, name)
+            if os.path.isfile(s) and not os.path.exists(d):
+                try:
+                    shutil.copy2(s, d)
+                except OSError:
+                    pass
+
+
+_seed_bundled_resources()
+
+
 def _check_ollama() -> bool:
     try:
         with urllib.request.urlopen("http://localhost:11434", timeout=2):
