@@ -193,13 +193,28 @@ class KnowledgeBase:
             block = block.strip()
             if not block:
                 continue
+            # Metadato inline: si el bloque empieza con un comentario, extrae
+            # la página y elimina el comentario del texto a indexar. Un bloque
+            # que es SOLO comentario (formato viejo) no se indexa como pasaje.
+            page = None
+            m = re.match(r"^<!--(.*?)-->", block, re.DOTALL)
+            if m:
+                pm = re.search(r"pag:(\d+)", m.group(1))
+                if pm:
+                    page = int(pm.group(1))
+                block = block[m.end():].strip()
+                if not block:
+                    continue
             lines = [ln for ln in block.splitlines() if ln.strip()]
             if lines and all(ln.lstrip().startswith("#") for ln in lines):
                 title = lines[0].lstrip("#").strip() or title
                 continue
             clean = re.sub(r"^#+\s*", "", block, flags=re.M).strip()
             if clean:
-                out.append({"domain": domain, "source": rel, "title": title, "text": clean})
+                p = {"domain": domain, "source": rel, "title": title, "text": clean}
+                if page is not None:
+                    p["page"] = page
+                out.append(p)
         return out
 
     def build(self):
@@ -364,6 +379,7 @@ class KnowledgeBase:
                 "source": p["source"],
                 "title": p["title"],
                 "text": p["text"],
+                "page": p.get("page"),
             })
         return out
 

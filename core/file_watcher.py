@@ -100,16 +100,19 @@ class FileWatcher:
             if result.get("status") in ("already_imported", "empty_or_unreadable", "error"):
                 return result
 
-            filename   = result["filename"]
-            chunks     = result.get("chunks", [])
+            filename    = result["filename"]
+            chunks      = result.get("chunks", [])
+            chunk_pages = result.get("chunk_pages", []) or [None] * len(chunks)
             if not chunks:
                 return {"file": filename, "status": "no_chunks"}
 
-            # 2. Determinar categoría (crea carpeta si es nueva)
-            category = self.classifier.classify_with_new(
-                " ".join(chunks[:3]),   # usa primeros fragmentos para clasificar
-                filename=filename,
-            )
+            # 2. Determinar categoría. import_file ya clasificó con
+            # classify_with_new sobre el texto completo (mejor señal); la
+            # reusamos para no clasificar dos veces ni desincronizar.
+            category = result.get("category")
+            if not category or category == "general":
+                category = self.classifier.classify_with_new(
+                    " ".join(chunks[:3]), filename=filename)
 
             # 3. Copiar original a documents/<categoria>/
             doc_dir  = os.path.join(DOCUMENTS_DIR, category)
@@ -136,6 +139,7 @@ class FileWatcher:
                     category    = category,
                     imported_at = result.get("imported_at", datetime.now().isoformat()),
                     chunks      = chunks,
+                    chunk_pages = chunk_pages,
                     cleaning    = result.get("cleaning", {}),
                 ))
 
@@ -159,9 +163,22 @@ class FileWatcher:
     # ------------------------------------------------------------------
 
     def _build_markdown(self, filename, source_path, dest_path,
-                         category, imported_at, chunks, cleaning):
-        """Genera el MD con cabecera de documento y metadatos inline por chunk."""
+                         category, imported_at, chunks, cleaning, chunk_pages=None):
+        """Genera el MD con cabecera de documento y metadatos inline por chunk.
+
+        El comentario de metadatos va PEGADO al texto del fragmento (sin línea
+        en blanco entre medias) para que el indexador (_passages_from_file) los
+        lea como un solo bloque y pueda asociar la página al pasaje.
+        """
         n_chunks = len(chunks)
+        if not chunk_pages or len(chunk_pages) != n_chunks:
+            chunk_pages = [None] * n_chunks
+
+        pages_present = [p for p in chunk_pages if p is not None]
+        page_range = ""
+        if pages_present:
+            page_range = f" (páginas {min(pages_present)}–{max(pages_present)})"
+
         lines = [
             f"# {Path(filename).stem}",
             "",
@@ -172,7 +189,7 @@ class FileWatcher:
             f"- **Copia en documents/:** {dest_path}",
             f"- **Categoría:** {category}",
             f"- **Importado:** {imported_at}",
-            f"- **Fragmentos:** {n_chunks}",
+            f"- **Fragmentos:** {n_chunks}{page_range}",
         ]
 
         if cleaning:
@@ -186,11 +203,16 @@ class FileWatcher:
         lines += ["", "---", ""]
 
         for i, chunk in enumerate(chunks, 1):
+            page = chunk_pages[i - 1]
+            page_tag   = f" | pag:{page}" if page is not None else ""
+            page_label = f" — página {page}" if page is not None else ""
+            comment = (f"<!-- fuente:{filename} | categoria:{category} | "
+                       f"frag:{i}/{n_chunks}{page_tag} -->")
             lines += [
-                f"## Fragmento {i} / {n_chunks}",
+                f"## Fragmento {i} / {n_chunks}{page_label}",
                 "",
-                f"<!-- fuente:{filename} | categoria:{category} | frag:{i}/{n_chunks} -->",
-                "",
+                # comentario + chunk SIN línea en blanco → un solo bloque
+                comment,
                 chunk,
                 "",
             ]

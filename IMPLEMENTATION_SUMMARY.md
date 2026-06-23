@@ -178,12 +178,12 @@ Activa:
 - ✅ DOCX: Procesamiento robusto
 - ✅ HTML: Parsing completo
 
-### Completo (Con OCR)
-```bash
-pip install pdfplumber python-docx beautifulsoup4 pytesseract pillow
-# Tamaño: ~200 MB + Tesseract en sistema
-# Solo si necesitas OCR en PDFs escaneados
-```
+### Reparación de capas de texto rotas
+El motor lee la capa de texto existente del PDF y **repara los artefactos
+que dejan los escaneos**: palabras partidas por guion, columnas y tablas
+rotas, ligaduras tipográficas, encabezados/pies repetidos y marcas de agua.
+No requiere ninguna dependencia adicional para esto — el pipeline de
+limpieza es stdlib pura.
 
 ---
 
@@ -255,8 +255,8 @@ Todo integrado y funcionando en segundo plano.
 
 ### Limitaciones Actuales
 
-❌ No procesa imágenes (solo texto)
-❌ OCR requiere instalación de pytesseract (pesado)
+❌ Lee la capa de texto del PDF; no convierte páginas escaneadas como
+   imagen a texto (sí repara los artefactos de escaneo en la capa de texto)
 ❌ Máximo fragmento: 300 palabras (configurable)
 ❌ PDFs protegidos solo con pdfplumber
 

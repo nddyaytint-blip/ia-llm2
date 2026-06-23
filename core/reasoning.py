@@ -938,7 +938,12 @@ class Reasoner:
         return "baja" if lang == "es" else "low"
 
     def _sources(self, hits):
-        return [f"{h['source']} (score {h['score']})" for h in hits[:5]]
+        out = []
+        for h in hits[:5]:
+            page = h.get("page")
+            loc  = f", página {page}" if page else ""
+            out.append(f"{h['source']}{loc} (score {h['score']})")
+        return out
 
     def _connections(self, related):
         return sorted(related.get("domains", []))

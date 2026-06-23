@@ -215,15 +215,15 @@ pip install pdfplumber python-docx beautifulsoup4
 
 Tamaño total: ~20 MB (ligero).
 
-### Completa (todos los formatos)
+### Reparación de artefactos de escaneo
 
-Si necesitas OCR en PDFs escaneados:
+El motor lee la capa de texto del PDF y repara lo que los escaneos suelen
+romper: palabras partidas, columnas y tablas fragmentadas, encabezados y
+pies de página repetidos, marcas de agua. Esto no requiere instalar nada
+extra — es parte del pipeline de limpieza incluido.
 
-```bash
-pip install pdfplumber python-docx beautifulsoup4 pytesseract pillow
-```
-
-**Nota:** pytesseract requiere Tesseract OCR instalado en el sistema.
+**Nota:** si un PDF es una imagen escaneada sin capa de texto, no hay texto
+que extraer. El motor trabaja sobre la capa de texto existente.
 
 ---
 
@@ -378,16 +378,16 @@ print(reporte)
 
 ## Limitaciones Actuales
 
-1. ❌ No procesa imágenes (solo texto)
-2. ❌ OCR requiere pytesseract (no incluido)
-3. ❌ Máximo fragmento de 300 palabras (optimizable)
-4. ❌ No maneja PDFs protegidos sin pdfplumber
+1. ❌ Lee la capa de texto del PDF; no convierte páginas escaneadas como
+   imagen a texto (sí repara los artefactos de escaneo en la capa de texto)
+2. ❌ Máximo fragmento de 300 palabras (optimizable)
+3. ❌ No maneja PDFs protegidos sin pdfplumber
 
 ---
 
 ## Roadmap Futuro
 
-- [ ] OCR integrado para PDFs escaneados
+- [ ] Cita por número de página (✅ implementado para PDF)
 - [ ] Extracción de tablas
 - [ ] Deduplicación de fragmentos
 - [ ] API de webhook para importación remota

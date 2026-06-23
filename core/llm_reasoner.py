@@ -70,7 +70,9 @@ def _build_context_block(hits: list, lang: str) -> str:
             break
         text  = h["text"][:MAX_PASSAGE_CHARS]
         src   = h.get("source", "")
-        lines.append(f"\n[{i}] Fuente: {src}\n{text}")
+        page  = h.get("page")
+        cite  = f"{src}, página {page}" if page else src
+        lines.append(f"\n[{i}] Fuente: {cite}\n{text}")
 
     lines.append("=" * 40)
     return "\n".join(lines)

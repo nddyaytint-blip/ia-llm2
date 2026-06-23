@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import re
+from collections import Counter
 from pathlib import Path
 from datetime import datetime
 
@@ -47,6 +48,25 @@ def _extract_pdf_text(pdf_path):
             return text.strip()
     except ImportError:
         return _extract_pdf_text_fallback(pdf_path)
+
+
+def _extract_pdf_pages(pdf_path):
+    """Extrae el texto de un PDF página por página.
+
+    Devuelve una lista [(num_pagina, texto), ...] con num_pagina 1-indexado.
+    Es la base de la cita por página: cada fragmento sabrá de qué página salió.
+    Si pdfplumber no está, cae al extractor bruto como una sola 'página'.
+    """
+    try:
+        import pdfplumber
+    except ImportError:
+        full = _extract_pdf_text_fallback(pdf_path)
+        return [(1, full)] if full else []
+    pages = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for i, page in enumerate(pdf.pages, 1):
+            pages.append((i, page.extract_text() or ""))
+    return pages
 
 
 def _extract_pdf_text_fallback(pdf_path):
@@ -410,6 +430,37 @@ def _split_into_chunks(text, max_words=300, overlap=50):
     return [c.strip() for c in chunks if len(c.split()) > 10]
 
 
+def _strip_running_headers(pages, min_pages=3, max_words=12):
+    """Elimina encabezados/pies corridos: líneas idénticas que aparecen en
+    ≥`min_pages` páginas distintas. Se hace ANTES de limpiar cada página por
+    separado, porque la repetición solo es visible mirando todas las páginas.
+
+    Args:
+        pages: lista [(num_pagina, texto), ...]
+    Returns:
+        la misma lista con las líneas-mobiliario eliminadas.
+    """
+    if len(pages) < min_pages:
+        return pages
+    counts = Counter()
+    for _n, text in pages:
+        seen = set()
+        for ln in text.splitlines():
+            s = " ".join(ln.split())
+            if s and len(s.split()) <= max_words and s not in seen:
+                counts[s] += 1
+                seen.add(s)
+    furniture = {s for s, c in counts.items() if c >= min_pages}
+    if not furniture:
+        return pages
+    out = []
+    for n, text in pages:
+        kept = [ln for ln in text.splitlines()
+                if " ".join(ln.split()) not in furniture]
+        out.append((n, "\n".join(kept)))
+    return out
+
+
 class DocumentImporter:
     """Importador de documentos multiformato."""
 
@@ -450,18 +501,21 @@ class DocumentImporter:
             return {"status": "already_imported", "file": filename}
 
         try:
-            text = self._extract_text(source_path, ext)
+            # PDF: ruta por páginas → cada fragmento conserva su nº de página
+            if ext == ".pdf":
+                text, chunks, chunk_pages, stats = self._process_pdf_by_page(source_path)
+            else:
+                text = self._extract_text(source_path, ext)
+                if not text or len(text) < 50:
+                    return {"status": "empty_or_unreadable", "file": filename}
+                raw_text = _normalize_text(text)
+                text  = clean_text(raw_text, aggressive=False)
+                stats = clean_stats(raw_text, text)
+                chunks = _split_into_chunks(text, max_words=300, overlap=50)
+                chunk_pages = [None] * len(chunks)
+
             if not text or len(text) < 50:
                 return {"status": "empty_or_unreadable", "file": filename}
-
-            # Limpieza profunda: artefactos PDF, duplicados, ruido tipográfico
-            raw_text = _normalize_text(text)
-            # PDFs suelen necesitar limpieza agresiva; TXT/MD son más limpios
-            aggressive = Path(source_path).suffix.lower() == ".pdf"
-            text = clean_text(raw_text, aggressive=aggressive)
-            stats = clean_stats(raw_text, text)
-
-            chunks = _split_into_chunks(text, max_words=300, overlap=50)
 
             if target_category is None and document_classifier:
                 # classify_with_new clasifica Y crea la categoría si es nueva,
@@ -484,6 +538,7 @@ class DocumentImporter:
                 "text_length": len(text),
                 "chunk_count": len(chunks),
                 "chunks": chunks,
+                "chunk_pages": chunk_pages,   # nº de página por fragmento (None si no aplica)
                 "cleaning": stats,
             }
 
@@ -499,6 +554,41 @@ class DocumentImporter:
 
         except Exception as e:
             return {"status": "error", "file": filename, "error": str(e)}
+
+    def _process_pdf_by_page(self, source_path):
+        """Procesa un PDF preservando el nº de página de cada fragmento.
+
+        Flujo:
+          1. Extraer texto página por página
+          2. Quitar encabezados/pies corridos (visible solo entre páginas)
+          3. Limpiar cada página por separado (modo agresivo)
+          4. Fragmentar cada página → cada chunk hereda su nº de página
+
+        Returns:
+            (texto_limpio_completo, chunks, chunk_pages, stats)
+        """
+        raw_pages = _extract_pdf_pages(source_path)
+        if not raw_pages:
+            return "", [], [], {}
+        raw_pages = _strip_running_headers(raw_pages)
+
+        chunks, chunk_pages, cleaned_parts = [], [], []
+        for pagenum, ptext in raw_pages:
+            if not ptext or not ptext.strip():
+                continue
+            norm    = _normalize_text(ptext)
+            cleaned = clean_text(norm, aggressive=True)
+            if not cleaned:
+                continue
+            cleaned_parts.append(cleaned)
+            for ch in _split_into_chunks(cleaned, max_words=300, overlap=50):
+                chunks.append(ch)
+                chunk_pages.append(pagenum)
+
+        full_clean = "\n\n".join(cleaned_parts)
+        raw_full   = _normalize_text("\n".join(p for _, p in raw_pages))
+        stats      = clean_stats(raw_full, full_clean)
+        return full_clean, chunks, chunk_pages, stats
 
     def _extract_text(self, path, ext):
         """Extrae texto según el formato."""
