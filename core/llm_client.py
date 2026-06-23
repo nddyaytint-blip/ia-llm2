@@ -22,14 +22,14 @@ LLM_CFG_PATH = os.path.join(BASE_DIR, "config_llm.json")
 DEFAULT_CFG = {
     "backend":          "auto",        # auto | ollama | openai | anthropic | none
     "ollama_url":       "http://localhost:11434",
-    "ollama_model":     "llama3.2",    # o phi3, mistral, gemma2:2b …
+    "ollama_model":     "qwen2.5:1.5b",  # modelo ligero recomendado al tester
     "openai_model":     "gpt-4o-mini",
     "anthropic_model":  "claude-haiku-4-5-20251001",
     "openai_api_key":   "",
     "anthropic_api_key":"",
     "max_tokens":       512,
     "temperature":      0.3,
-    "timeout":          30,
+    "timeout":          120,             # arranque en frío de qwen2.5 ~20-25s
 }
 
 
@@ -64,12 +64,21 @@ class _OllamaBackend:
         self.timeout    = cfg["timeout"]
 
     def is_available(self) -> bool:
+        """Disponible = Ollama responde Y el modelo configurado está descargado.
+
+        Comprobar solo que Ollama responda no basta: si el modelo no está
+        bajado, cada chat() devuelve 404 y el sistema cae a BM25 en silencio,
+        diciendo "LLM activo" cuando no lo está. Aquí verificamos el modelo.
+        """
         try:
             req = urllib.request.Request(f"{self.base_url}/api/tags", method="GET")
-            with urllib.request.urlopen(req, timeout=3):
-                return True
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                data = json.loads(resp.read())
         except Exception:
             return False
+        names = [m.get("name", "") for m in data.get("models", [])]
+        base  = self.model.split(":")[0]
+        return any(n == self.model or n.startswith(base + ":") for n in names)
 
     def chat(self, prompt: str) -> str:
         payload = json.dumps({
