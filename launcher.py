@@ -96,7 +96,9 @@ def main():
     from http.server import ThreadingHTTPServer
     from server import Handler
 
-    httpd = ThreadingHTTPServer(("", PORT), Handler)
+    # Atado a 127.0.0.1 (loopback): solo accesible desde esta máquina. Evita
+    # el aviso de firewall de Windows y garantiza que es 100% local/privado.
+    httpd = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
