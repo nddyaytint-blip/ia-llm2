@@ -223,6 +223,165 @@ def _normalize_punctuation(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 9. Tablas rotas (compactación de filas)
+# ---------------------------------------------------------------------------
+# Depende de los huecos horizontales de la extracción, así que corre ANTES
+# de normalizar espacios. No intenta reconstruir la semántica de la tabla
+# (imposible y propenso a inventar) — compacta cada fila en una sola línea
+# "celda | celda | celda" para que el chunking no la fragmente y BM25 la
+# pueda emparejar.
+
+_CELL_GAP_RE = re.compile(r" {2,}")  # ≥2 espacios separan celdas
+
+
+def _looks_like_table_row(line: str) -> bool:
+    """Una fila de tabla: ≥3 celdas separadas por huecos de ≥2 espacios."""
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return False
+    cells = [c for c in _CELL_GAP_RE.split(stripped) if c.strip()]
+    return len(cells) >= 3
+
+
+def _rebuild_broken_tables(text: str) -> str:
+    """Compacta regiones de tabla: filas con ≥3 celdas → 'a | b | c'.
+
+    Solo actúa sobre bloques de ≥2 filas consecutivas que parecen tabla,
+    para no tocar prosa normal que casualmente tenga dos espacios.
+    """
+    lines = text.split("\n")
+    out = []
+    block = []
+
+    def _flush():
+        if len(block) >= 2:          # bloque de tabla real
+            for row in block:
+                cells = [c.strip() for c in _CELL_GAP_RE.split(row.strip()) if c.strip()]
+                out.append(" | ".join(cells))
+        else:                         # falsa alarma: devolver tal cual
+            out.extend(block)
+        block.clear()
+
+    for line in lines:
+        if _looks_like_table_row(line):
+            block.append(line)
+        else:
+            _flush()
+            out.append(line)
+    _flush()
+    return "\n".join(out)
+
+
+# ---------------------------------------------------------------------------
+# 10. Doble columna
+# ---------------------------------------------------------------------------
+# La extracción de PDF a dos columnas suele intercalar ambas columnas en la
+# misma línea, separadas por un hueco grande de espacios. Detectamos bloques
+# donde la mayoría de las líneas tienen ese patrón y reflujimos: primero toda
+# la columna izquierda, luego toda la derecha. Conservador: si el patrón no es
+# fuerte, no toca nada. Corre ANTES de normalizar espacios.
+
+_COLUMN_GAP_RE = re.compile(r"(.+?\S) {3,}(\S.+)")  # izq <hueco≥3> der
+
+
+def _merge_double_columns(text: str, min_block: int = 4, min_ratio: float = 0.6) -> str:
+    """Reflujo de doble columna intercalada por línea.
+
+    Args:
+        min_block: nº mínimo de líneas en un bloque para considerarlo columnas.
+        min_ratio: fracción del bloque que debe tener el patrón de 2 columnas.
+    """
+    lines = text.split("\n")
+    out = []
+    i = 0
+    n = len(lines)
+    while i < n:
+        # ¿Empieza aquí un bloque candidato a doble columna?
+        j = i
+        splits = []
+        while j < n:
+            m = _COLUMN_GAP_RE.match(lines[j].rstrip())
+            if m:
+                splits.append((lines[j], m.group(1), m.group(2)))
+                j += 1
+            elif lines[j].strip() == "":
+                break  # línea vacía corta el bloque
+            else:
+                # línea sin patrón: solo rompe si ya hay bloque candidato
+                break
+        block_len = j - i
+        two_col = len(splits)
+        if block_len >= min_block and two_col / max(block_len, 1) >= min_ratio:
+            # Reflujo: izquierda completa, luego derecha completa
+            left  = " ".join(s[1].strip() for s in splits)
+            right = " ".join(s[2].strip() for s in splits)
+            out.append(left)
+            out.append(right)
+            i = j
+        else:
+            out.append(lines[i])
+            i += 1
+    return "\n".join(out)
+
+
+# ---------------------------------------------------------------------------
+# 11. Encabezados/pies repetidos y marcas de agua
+# ---------------------------------------------------------------------------
+
+# Marcas de agua frecuentes (línea suelta, cualquier caja)
+_WATERMARK_TOKENS = {
+    "confidential", "confidencial", "draft", "borrador", "sample", "muestra",
+    "copy", "copia", "specimen", "do not copy", "no copiar", "for review",
+    "preview", "vista previa", "uncorrected proof", "evaluation copy",
+}
+
+
+def _drop_repeated_headers(text: str, min_count: int = 3, max_words: int = 10) -> str:
+    """Elimina líneas cortas que se repiten muchas veces (encabezados/pies).
+
+    Un encabezado de página corrido ('Capítulo 4 — Fotosíntesis    47') aparece
+    una vez por página. Si una línea corta se repite ≥min_count veces, se
+    considera mobiliario de página y se elimina por completo.
+    """
+    lines = text.split("\n")
+    counts = Counter()
+    for line in lines:
+        s = line.strip()
+        if s and not s.startswith("#") and len(s.split()) <= max_words:
+            counts[s.lower()] += 1
+    repeated = {k for k, v in counts.items() if v >= min_count}
+    if not repeated:
+        return text
+    return "\n".join(
+        l for l in lines
+        if l.strip().lower() not in repeated or l.strip().startswith("#")
+    )
+
+
+def _strip_watermarks(text: str) -> str:
+    """Elimina líneas sueltas que son marcas de agua conocidas o una sola
+    palabra en MAYÚSCULAS repetida (estampado típico de PDF)."""
+    lines = text.split("\n")
+    # Palabras en mayúsculas sueltas que se repiten ≥3 veces → marca de agua
+    caps_counts = Counter()
+    for line in lines:
+        s = line.strip()
+        if s.isupper() and len(s.split()) == 1 and len(s) >= 3:
+            caps_counts[s] += 1
+    repeated_caps = {k for k, v in caps_counts.items() if v >= 3}
+
+    out = []
+    for line in lines:
+        s = line.strip().lower()
+        if s in _WATERMARK_TOKENS:
+            continue
+        if line.strip() in repeated_caps:
+            continue
+        out.append(line)
+    return "\n".join(out)
+
+
+# ---------------------------------------------------------------------------
 # API pública
 # ---------------------------------------------------------------------------
 
@@ -231,8 +390,9 @@ def clean(text: str, *, aggressive: bool = False) -> str:
 
     Args:
         text: texto crudo de extractor (PDF/DOCX/HTML/TXT).
-        aggressive: si True, aplica eliminación de líneas cortas más estricta
-                    (útil para PDFs con muchos artefactos).
+        aggressive: si True, aplica las capas geométricas (doble columna,
+                    compactación de tablas) y eliminación de líneas cortas
+                    más estricta. Útil para PDFs con muchos artefactos.
 
     Returns:
         Texto limpio listo para chunking e indexación.
@@ -242,9 +402,16 @@ def clean(text: str, *, aggressive: bool = False) -> str:
 
     text = _normalize_unicode(text)
     text = _fix_pdf_artifacts(text)
+    # Capas geométricas: dependen de los huecos de espacios → antes de
+    # normalizar whitespace, y solo en modo agresivo (PDF) por su riesgo.
+    if aggressive:
+        text = _rebuild_broken_tables(text)
+        text = _merge_double_columns(text)
     text = _strip_html_entities(text)
     text = _strip_control_chars(text)
     text = _normalize_whitespace(text)
+    text = _drop_repeated_headers(text)
+    text = _strip_watermarks(text)
     text = _remove_short_noise_lines(text, min_words=2 if not aggressive else 4)
     text = _remove_duplicate_paragraphs(text)
     text = _normalize_punctuation(text)
