@@ -1097,11 +1097,6 @@ class Reasoner:
         fresh_hits = self.kb.search(prev_query)
         fresh_quality, _ = self._assess(prev_query, fresh_hits)
 
-        # Si la re-búsqueda trae evidencia fuerte, verificamos si contradice
-        # lo que dijimos antes. Usamos el texto de la respuesta previa guardada
-        # en _memory como referencia aproximada.
-        prev_reply_tokens = set(tokenize(self.last.get("reply", "") or ""))
-
         # --- Paso 2: buscar si el usuario está dando una contra-afirmación ----
         # Extraemos palabras de contenido del texto de objeción para buscarlas
         challenge_terms = [t for t in tokenize(text)

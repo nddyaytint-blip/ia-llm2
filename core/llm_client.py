@@ -101,23 +101,26 @@ class _OpenAIBackend:
         self.max_tokens = cfg["max_tokens"]
         self.temp       = cfg["temperature"]
         self.timeout    = cfg["timeout"]
+        self._client    = None   # se crea una sola vez (lazy) en chat()
 
     def is_available(self) -> bool:
         return bool(self.api_key)
 
     def chat(self, prompt: str) -> str:
-        try:
-            import openai
-            client = openai.OpenAI(api_key=self.api_key)
-            resp = client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=self.max_tokens,
-                temperature=self.temp,
-            )
-            return resp.choices[0].message.content.strip()
-        except ImportError:
-            raise RuntimeError("openai no instalado — ejecuta: pip install openai")
+        if self._client is None:
+            try:
+                import openai
+            except ImportError:
+                raise RuntimeError("openai no instalado — ejecuta: pip install openai")
+            # Reutiliza el pool de conexiones HTTP entre llamadas.
+            self._client = openai.OpenAI(api_key=self.api_key)
+        resp = self._client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=self.max_tokens,
+            temperature=self.temp,
+        )
+        return resp.choices[0].message.content.strip()
 
 
 class _AnthropicBackend:

@@ -15,6 +15,7 @@ import time
 from collections import deque
 
 from core.llm_client import LLMClient
+from core.reasoning import Reasoner
 from core.storage import (
     save_conversation, load_conversation, append_knowledge_gap,
     append_improvement,
@@ -90,68 +91,20 @@ def _build_history_block(memory: deque, lang: str) -> str:
     return "\n".join(lines)
 
 
-class LLMReasoner:
+class LLMReasoner(Reasoner):
     """Razonador que combina BM25 (recuperación) con LLM (generación).
 
-    Compatible con la misma interfaz que Reasoner para que engine.py
-    pueda usarlos de forma intercambiable.
+    Hereda de Reasoner todos los métodos auxiliares (is_challenge,
+    is_explain_request, is_self_question, explain, self_explain, etc.)
+    y sobreescribe solo answer() y debate() para usar el LLM.
     """
 
     def __init__(self, kb, session_id: str = "default"):
-        self.kb         = kb
-        self.session_id = session_id
-        self.last       = None
-        self._memory: deque = deque(maxlen=MEMORY_TURNS)
-        self._client    = LLMClient.from_config()
-        self._load_memory()
+        super().__init__(kb, session_id=session_id)
+        self._client = LLMClient.from_config()
 
     # ------------------------------------------------------------------
-    # Compatibilidad con engine.py
-    # ------------------------------------------------------------------
-
-    def set_session(self, session_id: str):
-        if session_id != self.session_id:
-            self.session_id = session_id
-            self._memory.clear()
-            self._load_memory()
-
-    def memory_summary(self) -> list:
-        return list(self._memory)
-
-    def is_question(self, text: str) -> bool:
-        toks = text.split()
-        starts = {"qué","que","cómo","como","cuál","cual","cuándo","cuando",
-                  "dónde","donde","quién","quien","por","para","es","son",
-                  "what","how","which","when","where","who","why","is","are","can"}
-        return "?" in text or "¿" in text or (bool(toks) and toks[0].lower() in starts)
-
-    def is_challenge(self, text: str) -> bool:
-        return bool(CHALLENGE_PATTERNS.search(text))
-
-    # ------------------------------------------------------------------
-    # Memoria persistente
-    # ------------------------------------------------------------------
-
-    def _load_memory(self):
-        for turn in load_conversation(self.session_id)[-MEMORY_TURNS:]:
-            self._memory.append(turn)
-
-    def _save_memory(self):
-        save_conversation(self.session_id, list(self._memory))
-
-    def _store_turn(self, query: str, reply: str, lang: str,
-                    domains: list, confidence: float = 0.0):
-        self._memory.append({
-            "query":      query,
-            "reply":      reply[:200],
-            "lang":       lang,
-            "domains":    domains,
-            "confidence": confidence,
-        })
-        self._save_memory()
-
-    # ------------------------------------------------------------------
-    # Respuesta principal
+    # Respuesta principal (sobreescribe Reasoner.answer)
     # ------------------------------------------------------------------
 
     def answer(self, text: str, lang: str, verbosity: str = "normal") -> dict:

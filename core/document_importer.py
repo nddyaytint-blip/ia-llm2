@@ -5,6 +5,7 @@ Funciona completamente offline sin GPU. Extrae texto, normaliza y divide en frag
 Todos los formatos tienen fallback stdlib para funcionar sin dependencias externas.
 """
 
+import hashlib
 import json
 import os
 import re
@@ -387,10 +388,19 @@ def _split_into_chunks(text, max_words=300, overlap=50):
     for sent in sentences:
         sent_words = len(sent.split())
         if current_words + sent_words > max_words and current:
-            chunk_text = " ".join(current)
-            chunks.append(chunk_text)
-            current = current[-overlap:] if overlap < len(current) else current
-            current_words = sum(len(s.split()) for s in current)
+            chunks.append(" ".join(current))
+            # Solapamiento: arrastrar las últimas oraciones hasta acumular
+            # ~`overlap` PALABRAS (no `overlap` oraciones). Evita el doble
+            # conteo: `sent` se añade una sola vez al final del bucle.
+            carry, carry_words = [], 0
+            for s in reversed(current):
+                w = len(s.split())
+                if carry and carry_words + w > overlap:
+                    break
+                carry.insert(0, s)
+                carry_words += w
+            current = carry
+            current_words = carry_words
         current.append(sent)
         current_words += sent_words
 
@@ -454,7 +464,14 @@ class DocumentImporter:
             chunks = _split_into_chunks(text, max_words=300, overlap=50)
 
             if target_category is None and document_classifier:
-                target_category = document_classifier.classify(text)
+                # classify_with_new clasifica Y crea la categoría si es nueva,
+                # usando el texto completo (mejor señal que solo los chunks).
+                # Así el registro guarda la MISMA categoría que usa file_watcher.
+                if hasattr(document_classifier, "classify_with_new"):
+                    target_category = document_classifier.classify_with_new(
+                        text, filename=filename)
+                else:
+                    target_category = document_classifier.classify(text)
 
             target_category = target_category or "general"
 
@@ -515,12 +532,17 @@ class DocumentImporter:
                 return f.read()
 
     def _file_hash(self, path):
-        """Calcula un hash simple del archivo (mtime + size)."""
+        """Hash de contenido (SHA-256) — identifica el archivo por lo que
+        contiene, no por mtime+size, que colisionan entre archivos distintos.
+        En error devuelve una clave única por ruta para no colapsar a ''."""
         try:
-            stat = os.stat(path)
-            return f"{stat.st_mtime}_{stat.st_size}"
+            h = hashlib.sha256()
+            with open(path, "rb") as f:
+                for block in iter(lambda: f.read(65536), b""):
+                    h.update(block)
+            return h.hexdigest()
         except OSError:
-            return ""
+            return f"unreadable_{os.path.abspath(path)}"
 
     def get_import_status(self):
         """Devuelve estadísticas de importación."""
